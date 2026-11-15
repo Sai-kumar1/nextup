@@ -6,7 +6,7 @@ A simple, offline todo list for Android, built with Kotlin, Jetpack Compose (Mat
 - **Plan by day:** the home screen shows only today's tasks. Swipe the week strip or open the calendar to plan any other day; dots mark days that have tasks. *Today* jumps back.
 - **Tasks with notes:** tap a task to view it. Links in notes open in the browser on tap and are copied to the clipboard on long-press. Edit a task to change its title, notes or day.
 - **Done and undo:** tick tasks off (they move to a collapsible *Completed* section), swipe to delete with Undo, or clear a day's completed tasks.
-- **Light and dark themes:** the sun/moon button switches themes with a circular reveal (light rises from the bottom, dark falls from the top). It follows the system theme until you use it.
+- **Light and dark themes:** the sun/moon button switches themes with a circular reveal (light rises from the bottom, dark falls from the top). It follows the system theme until you use it. Colors match [sai-kumar1.github.io](https://sai-kumar1.github.io): a soft gray canvas with white cards in light, layered dark grays in dark (no pure white or black), and a crimson accent.
 - **Friendly empty states:** an animated ☕ when nothing is planned, and a 🎉 when every task of the day is done.
 - Everything is stored on the device.
 

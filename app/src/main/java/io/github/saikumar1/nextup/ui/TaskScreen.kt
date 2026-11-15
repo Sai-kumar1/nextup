@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -29,6 +30,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -52,6 +54,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,6 +76,9 @@ import java.time.LocalDate
 
 /** Sentinel for "the editor is open for a brand-new task". */
 private const val NEW_TASK_ID = 0L
+
+/** Matches the site's --radius. */
+private val CardShape = RoundedCornerShape(12.dp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,6 +180,8 @@ fun TaskScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { editingId = NEW_TASK_ID },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 text = { Text("New task") },
             )
@@ -190,7 +198,7 @@ fun TaskScreen(
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = padding.calculateTopPadding(),
+                    top = padding.calculateTopPadding() + 8.dp,
                     // Leave room so the FAB never covers the last row.
                     bottom = padding.calculateBottomPadding() + 88.dp,
                 ),
@@ -321,7 +329,9 @@ private fun SwipeableTaskRow(
     )
     SwipeToDismissBox(
         state = dismissState,
-        modifier = modifier,
+        modifier = modifier
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clip(CardShape),
         backgroundContent = {
             val alignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) {
                 Alignment.CenterStart
@@ -352,6 +362,10 @@ private fun TaskRow(task: Task, onToggle: () -> Unit, onClick: () -> Unit) {
     val contentAlpha = if (task.isDone) 0.6f else 1f
     ListItem(
         modifier = Modifier.clickable(onClick = onClick),
+        // The white "sheet" in light, a raised gray in dark.
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
         leadingContent = {
             Checkbox(checked = task.isDone, onCheckedChange = { onToggle() })
         },

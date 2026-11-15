@@ -19,7 +19,7 @@ APKs are built by GitHub Actions; no local Android toolchain is needed.
 | Debug APK | every push and pull request | Actions → *Android CI* run → **Artifacts** → `nextup-debug-<sha>` (a zip containing the APK) |
 | Signed release APK | when you push a tag `v*` | **Releases** page → `nextup-<version>.apk` |
 
-The debug build uses the application id `io.github.saikumar1.nextup.debug`, so it can be installed next to the release build.
+The debug build is a separate app named **NextUp Debug** (application id `io.github.saikumar1.nextup.debug`). It installs next to the release app and never updates it; only APKs from the Releases page update the release app.
 
 To install, copy the APK to your phone and open it (allow "install unknown apps" when asked), or run `adb install nextup-x.y.z.apk`.
 

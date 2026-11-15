@@ -1,0 +1,4 @@
+<resources>
+    <!-- Debug builds install as a separate app (.debug); make that obvious on the launcher. -->
+    <string name="app_name">NextUp Debug</string>
+</resources>

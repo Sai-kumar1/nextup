@@ -28,29 +28,30 @@ The tag sets `versionName` (`v0.1.0` → `0.1.0`). `versionCode` is the workflow
 
 ## Release signing (one-time setup)
 
-The release workflow needs a keystore stored as repository secrets.
+The release workflow signs the APK with a keystore stored as repository secrets. This is already set up for this repo; the steps below are for recreating it.
 
-1. Generate a keystore (`keytool` comes with any JDK, e.g. `sudo apt install openjdk-17-jdk-headless`):
+1. Create a PKCS12 keystore with OpenSSL (no JDK needed):
    ```sh
-   keytool -genkeypair -v -keystore nextup-release.jks -alias nextup \
-     -keyalg RSA -keysize 4096 -validity 10000
+   mkdir -p ~/nextup-signing && cd ~/nextup-signing && umask 077
+   PASS=$(openssl rand -hex 24)
+   openssl req -x509 -newkey rsa:4096 -sha256 -days 10000 -nodes \
+     -subj "/CN=NextUp" -keyout key.pem -out cert.pem
+   openssl pkcs12 -export -name nextup -inkey key.pem -in cert.pem \
+     -out nextup-release.p12 -passout pass:"$PASS"
+   rm key.pem
+   printf 'KEYSTORE_PASSWORD=%s\nKEY_PASSWORD=%s\nKEY_ALIAS=nextup\n' "$PASS" "$PASS" > secrets.env
    ```
-2. Encode it:
+   (`keytool -genkeypair -keystore nextup-release.jks -alias nextup -keyalg RSA -keysize 4096 -validity 10000` from a JDK works too.)
+2. Upload the secrets with the GitHub CLI:
    ```sh
-   base64 -w0 nextup-release.jks > nextup-release.jks.b64
+   gh secret set KEYSTORE_BASE64 < <(base64 -w0 nextup-release.p12)
+   grep '^KEYSTORE_PASSWORD=' secrets.env | cut -d= -f2- | tr -d '\n' | gh secret set KEYSTORE_PASSWORD
+   grep '^KEY_PASSWORD=' secrets.env | cut -d= -f2- | tr -d '\n' | gh secret set KEY_PASSWORD
+   printf nextup | gh secret set KEY_ALIAS
    ```
-3. In GitHub, open **Settings → Secrets and variables → Actions** and add:
+   Or add them by hand under **Settings → Secrets and variables → Actions**.
 
-   | Secret | Value |
-   |---|---|
-   | `KEYSTORE_BASE64` | contents of `nextup-release.jks.b64` |
-   | `KEYSTORE_PASSWORD` | the keystore password |
-   | `KEY_ALIAS` | `nextup` (or the alias you chose) |
-   | `KEY_PASSWORD` | the key password (same as the keystore password if you pressed Enter) |
-
-   Or use the GitHub CLI: `gh secret set KEYSTORE_BASE64 < nextup-release.jks.b64`, and so on.
-
-> **Back up `nextup-release.jks` and its passwords somewhere safe, and never commit it** (`*.jks` is git-ignored). Android only installs an update over an existing app if both are signed with the same key.
+> **Back up `~/nextup-signing/` (keystore and `secrets.env`) somewhere safe, and never commit it** (`*.jks`, `*.p12` and `*.keystore` are git-ignored). Android only installs an update over an existing app if both are signed with the same key.
 
 ## Building locally (optional)
 

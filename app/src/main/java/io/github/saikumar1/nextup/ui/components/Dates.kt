@@ -10,6 +10,8 @@ import androidx.compose.runtime.Composable
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -24,6 +26,44 @@ fun friendlyDate(date: LocalDate, today: LocalDate): String = when (date) {
             Locale.getDefault(),
         ),
     )
+}
+
+/**
+ * Screen title: relative wording people think in, never the full date (the week strip
+ * already shows exactly which day it is).
+ * Today / Tomorrow / Yesterday, the weekday within a week ("Wednesday", "Last Friday"),
+ * otherwise a short date ("Wed, 24 Dec").
+ */
+fun headerTitle(date: LocalDate, today: LocalDate): String {
+    val days = ChronoUnit.DAYS.between(today, date)
+    val weekday = date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
+    return when (days) {
+        0L, 1L, -1L -> friendlyDate(date, today)
+        in 2L..6L -> weekday
+        in -6L..-2L -> "Last $weekday"
+        else -> friendlyDate(date, today)
+    }
+}
+
+/**
+ * Status line under the title: how the day is going, plus how far away it is when that
+ * isn't already obvious from the title. E.g. "3 of 5 done", "All done ✓",
+ * "In 9 days · 2 tasks", "Nothing planned".
+ */
+fun headerSubtitle(date: LocalDate, today: LocalDate, total: Int, done: Int): String {
+    val days = ChronoUnit.DAYS.between(today, date)
+    val distance = when {
+        days > 1 -> "In $days days"
+        days < -1 -> "${-days} days ago"
+        else -> null
+    }
+    val status = when {
+        total == 0 -> "Nothing planned"
+        done >= total -> "All done ✓"
+        days > 0 && done == 0 -> if (total == 1) "1 task" else "$total tasks"
+        else -> "$done of $total done"
+    }
+    return listOfNotNull(distance, status).joinToString(" · ")
 }
 
 /** Full date like "Sunday, 15 November 2026". */

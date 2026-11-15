@@ -91,7 +91,8 @@ import io.github.saikumar1.nextup.ui.components.color
 import io.github.saikumar1.nextup.ui.components.friendlyDate
 import io.github.saikumar1.nextup.ui.components.groupLabel
 import io.github.saikumar1.nextup.ui.components.label
-import io.github.saikumar1.nextup.ui.components.longDate
+import io.github.saikumar1.nextup.ui.components.headerSubtitle
+import io.github.saikumar1.nextup.ui.components.headerTitle
 import io.github.saikumar1.nextup.ui.reorder.DropResult
 import io.github.saikumar1.nextup.ui.reorder.ListRow
 import io.github.saikumar1.nextup.ui.reorder.buildRows
@@ -213,12 +214,20 @@ fun TaskScreen(
             Column(Modifier.background(MaterialTheme.colorScheme.surface)) {
                 TopAppBar(
                     title = {
+                        // Where am I (relative) + how is the day going; the exact date
+                        // lives once, in the week strip below.
                         Column {
-                            Text(friendlyDate(state.date, state.today))
+                            Text(headerTitle(state.date, state.today))
+                            val total = state.active.size + state.allCompleted.size
+                            val done = state.allCompleted.size
                             Text(
-                                longDate(state.date),
+                                headerSubtitle(state.date, state.today, total, done),
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (total > 0 && done == total) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                             )
                         }
                     },

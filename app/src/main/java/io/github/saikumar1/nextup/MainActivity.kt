@@ -18,10 +18,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val themePreferences = (application as NextUpApp).container.themePreferences
+        val preferences = (application as NextUpApp).container.preferences
         setContent {
-            val storedDark by themePreferences.darkMode.collectAsStateWithLifecycle()
+            val storedDark by preferences.darkMode.collectAsStateWithLifecycle()
             val isDark = storedDark ?: isSystemInDarkTheme()
+            val confirmPriorityChange by preferences.confirmPriorityChange.collectAsStateWithLifecycle()
 
             // Keep status/navigation bar icons readable for the app's (not the system's) theme.
             DisposableEffect(isDark) {
@@ -32,9 +33,14 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
 
-            ThemeRevealHost(isDark = isDark, onThemeChange = themePreferences::setDarkMode) { toggle ->
+            ThemeRevealHost(isDark = isDark, onThemeChange = preferences::setDarkMode) { toggle ->
                 NextUpTheme(darkTheme = isDark) {
-                    TaskScreen(isDark = isDark, onToggleTheme = toggle)
+                    TaskScreen(
+                        isDark = isDark,
+                        onToggleTheme = toggle,
+                        confirmPriorityChange = confirmPriorityChange,
+                        onConfirmPriorityChangeSet = preferences::setConfirmPriorityChange,
+                    )
                 }
             }
         }

@@ -1,6 +1,9 @@
 package io.github.saikumar1.nextup.ui.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -29,23 +33,26 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import io.github.saikumar1.nextup.data.Priority
 import io.github.saikumar1.nextup.data.Task
 import java.time.LocalDate
 
-/** Add (initial == null) or edit a task: title, notes and the day it's planned for. */
+/** Add (initial == null) or edit a task: title, notes, priority and the day it's planned for. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TaskEditorDialog(
     initial: Task?,
     defaultDate: LocalDate,
     today: LocalDate,
     onDismiss: () -> Unit,
-    onSave: (title: String, notes: String, date: LocalDate) -> Unit,
+    onSave: (title: String, notes: String, date: LocalDate, priority: Priority) -> Unit,
 ) {
     var title by rememberSaveable { mutableStateOf(initial?.title.orEmpty()) }
     var notes by rememberSaveable { mutableStateOf(initial?.notes.orEmpty()) }
     var day by rememberSaveable {
         mutableLongStateOf(initial?.dueDate ?: defaultDate.toEpochDay())
     }
+    var priority by rememberSaveable { mutableStateOf(initial?.priority ?: Priority.NONE) }
     var pickingDate by rememberSaveable { mutableStateOf(false) }
     val date = LocalDate.ofEpochDay(day)
     val focusRequester = remember { FocusRequester() }
@@ -81,7 +88,25 @@ fun TaskEditorDialog(
                     ),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Priority",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Priority.displayOrder.forEach { option ->
+                        FilterChip(
+                            selected = priority == option,
+                            onClick = { priority = option },
+                            label = { Text(option.label) },
+                            leadingIcon = option.icon?.let {
+                                { PriorityIcon(option, contentDescription = null) }
+                            },
+                        )
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
                 Row {
                     AssistChip(
                         onClick = { pickingDate = true },
@@ -96,7 +121,7 @@ fun TaskEditorDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(title, notes, date) },
+                onClick = { onSave(title, notes, date, priority) },
                 enabled = title.isNotBlank(),
             ) { Text("Save") }
         },

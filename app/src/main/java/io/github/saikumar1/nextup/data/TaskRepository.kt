@@ -7,6 +7,7 @@ interface TaskRepository {
     fun observeDayCounts(from: Long, to: Long): Flow<List<DayCount>>
     suspend fun add(task: Task): Long
     suspend fun update(task: Task)
+    suspend fun updateAll(tasks: List<Task>)
     suspend fun delete(task: Task)
     suspend fun clearCompleted(day: Long)
 }
@@ -17,6 +18,7 @@ class RoomTaskRepository(private val dao: TaskDao) : TaskRepository {
         dao.observeDayCounts(from, to)
     override suspend fun add(task: Task): Long = dao.insert(task)
     override suspend fun update(task: Task) = dao.update(task)
+    override suspend fun updateAll(tasks: List<Task>) = dao.updateAll(tasks)
     override suspend fun delete(task: Task) = dao.delete(task)
     override suspend fun clearCompleted(day: Long) = dao.clearCompleted(day)
 }

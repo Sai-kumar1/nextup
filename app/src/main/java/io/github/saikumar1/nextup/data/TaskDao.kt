@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-    @Query("SELECT * FROM tasks WHERE dueDate = :day ORDER BY createdAt ASC")
+    @Query("SELECT * FROM tasks WHERE dueDate = :day ORDER BY position ASC, createdAt ASC")
     fun observeForDate(day: Long): Flow<List<Task>>
 
     @Query(
@@ -28,6 +28,10 @@ interface TaskDao {
 
     @Update
     suspend fun update(task: Task)
+
+    /** Updates several tasks in one transaction (used when reordering). */
+    @Update
+    suspend fun updateAll(tasks: List<Task>)
 
     @Delete
     suspend fun delete(task: Task)

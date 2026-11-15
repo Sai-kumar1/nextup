@@ -2,6 +2,7 @@ package io.github.saikumar1.nextup.ui
 
 import androidx.lifecycle.SavedStateHandle
 import io.github.saikumar1.nextup.data.DayCount
+import io.github.saikumar1.nextup.data.Priority
 import io.github.saikumar1.nextup.data.Task
 import io.github.saikumar1.nextup.data.TaskRepository
 import kotlinx.coroutines.Dispatchers
@@ -29,8 +30,11 @@ private class FakeTaskRepository : TaskRepository {
     val tasks = MutableStateFlow<List<Task>>(emptyList())
     private var nextId = 1L
 
+    // Same ordering as the DAO.
     override fun observeForDate(day: Long): Flow<List<Task>> =
-        tasks.map { list -> list.filter { it.dueDate == day } }
+        tasks.map { list ->
+            list.filter { it.dueDate == day }.sortedWith(compareBy({ it.position }, { it.createdAt }))
+        }
 
     override fun observeDayCounts(from: Long, to: Long): Flow<List<DayCount>> =
         tasks.map { list ->
@@ -41,13 +45,17 @@ private class FakeTaskRepository : TaskRepository {
 
     override suspend fun add(task: Task): Long {
         val id = if (task.id == 0L) nextId++ else task.id
-        // Distinct, increasing createdAt keeps ordering deterministic.
-        tasks.update { list -> list.filterNot { it.id == id } + task.copy(id = id, createdAt = id) }
+        tasks.update { list -> list.filterNot { it.id == id } + task.copy(id = id) }
         return id
     }
 
     override suspend fun update(task: Task) =
         tasks.update { list -> list.map { if (it.id == task.id) task else it } }
+
+    override suspend fun updateAll(tasks: List<Task>) {
+        val byId = tasks.associateBy { it.id }
+        this.tasks.update { list -> list.map { byId[it.id] ?: it } }
+    }
 
     override suspend fun delete(task: Task) =
         tasks.update { list -> list.filterNot { it.id == task.id } }
@@ -62,6 +70,7 @@ class TaskViewModelTest {
     private val today = LocalDate.of(2026, 11, 15)
     private val tomorrow = today.plusDays(1)
     private var clockDate = today
+    private var time = 1_000L
     private lateinit var repository: FakeTaskRepository
     private lateinit var viewModel: TaskViewModel
 
@@ -69,7 +78,7 @@ class TaskViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         repository = FakeTaskRepository()
-        viewModel = TaskViewModel(repository, SavedStateHandle(), clock = { clockDate })
+        viewModel = TaskViewModel(repository, SavedStateHandle(), clock = { clockDate }, now = { time++ })
     }
 
     @After
@@ -144,7 +153,7 @@ class TaskViewModelTest {
 
         viewModel.toggleDone(state.active.single())
         assertEquals(DayMood.AllDone, state.mood)
-        assertEquals(2, state.completed.size)
+        assertEquals(2, state.allCompleted.size)
     }
 
     @Test
@@ -207,5 +216,103 @@ class TaskViewModelTest {
         assertEquals(1, counts.getValue(today).done)
         assertEquals(1, counts.getValue(tomorrow).total)
         assertFalse(counts.containsKey(today.plusDays(2)))
+    }
+
+    private fun titles(priority: Priority) =
+        state.groups.single { it.priority == priority }.tasks.map { it.title }
+
+    @Test
+    fun tasksAreGroupedByPriority_inDisplayOrder() = runTest(dispatcher) {
+        subscribe()
+        viewModel.addTask("Plain")
+        viewModel.addTask("Urgent", priority = Priority.HIGH)
+        viewModel.addTask("Someday", priority = Priority.LOW)
+
+        assertEquals(Priority.displayOrder, state.groups.map { it.priority })
+        assertEquals(listOf("Urgent"), titles(Priority.HIGH))
+        assertTrue(titles(Priority.MEDIUM).isEmpty())
+        assertEquals(listOf("Someday"), titles(Priority.LOW))
+        assertEquals(listOf("Plain"), titles(Priority.NONE))
+    }
+
+    @Test
+    fun newTaskGoesToBottomOfItsGroup() = runTest(dispatcher) {
+        subscribe()
+        viewModel.addTask("First", priority = Priority.HIGH)
+        viewModel.addTask("Second", priority = Priority.HIGH)
+        assertEquals(listOf("First", "Second"), titles(Priority.HIGH))
+    }
+
+    @Test
+    fun filter_narrowsGroupsAndCompleted_butNotMood() = runTest(dispatcher) {
+        subscribe()
+        viewModel.addTask("H", priority = Priority.HIGH)
+        viewModel.addTask("L", priority = Priority.LOW)
+        viewModel.addTask("L done", priority = Priority.LOW)
+        viewModel.toggleDone(state.active.first { it.title == "L done" })
+
+        viewModel.setFilter(PriorityFilter.HIGH)
+        assertEquals(listOf(Priority.HIGH), state.groups.map { it.priority })
+        assertEquals(listOf("H"), titles(Priority.HIGH))
+        assertTrue(state.completed.isEmpty())
+        assertEquals(DayMood.InProgress, state.mood)
+
+        // Selecting the active filter again clears it.
+        viewModel.setFilter(PriorityFilter.HIGH)
+        assertEquals(PriorityFilter.ALL, state.filter)
+        assertEquals(1, state.completed.size)
+    }
+
+    @Test
+    fun filter_reportsWhenEverythingIsFilteredOut() = runTest(dispatcher) {
+        subscribe()
+        viewModel.addTask("Only low", priority = Priority.LOW)
+        viewModel.setFilter(PriorityFilter.HIGH)
+        assertTrue(state.filteredOut)
+    }
+
+    @Test
+    fun moveTask_reordersWithinGroup() = runTest(dispatcher) {
+        subscribe()
+        viewModel.addTask("A")
+        viewModel.addTask("B")
+        viewModel.addTask("C")
+        val (a, b, c) = state.active.map { it.id }
+
+        viewModel.moveTask(c, Priority.NONE, listOf(c, a, b))
+
+        assertEquals(listOf("C", "A", "B"), titles(Priority.NONE))
+    }
+
+    @Test
+    fun moveTask_toAnotherGroup_changesPriority_andKeepsOtherGroupsOrder() = runTest(dispatcher) {
+        subscribe()
+        viewModel.addTask("H1", priority = Priority.HIGH)
+        viewModel.addTask("N1")
+        viewModel.addTask("N2")
+        viewModel.addTask("N3")
+        val h1 = state.active.first { it.title == "H1" }.id
+        val n2 = state.active.first { it.title == "N2" }.id
+
+        viewModel.moveTask(n2, Priority.HIGH, listOf(n2, h1))
+
+        assertEquals(listOf("N2", "H1"), titles(Priority.HIGH))
+        assertEquals(listOf("N1", "N3"), titles(Priority.NONE))
+        assertEquals(Priority.HIGH, state.find(n2)?.priority)
+    }
+
+    @Test
+    fun editingPriority_movesTaskToBottomOfNewGroup() = runTest(dispatcher) {
+        subscribe()
+        viewModel.addTask("M1", priority = Priority.MEDIUM)
+        viewModel.addTask("X")
+        // Pin M1 to the top of its group, as a drag would.
+        val m1 = state.active.first { it.title == "M1" }
+        viewModel.moveTask(m1.id, Priority.MEDIUM, listOf(m1.id))
+
+        val x = state.active.first { it.title == "X" }
+        viewModel.updateTask(x, "X", "", priority = Priority.MEDIUM)
+
+        assertEquals(listOf("M1", "X"), titles(Priority.MEDIUM))
     }
 }

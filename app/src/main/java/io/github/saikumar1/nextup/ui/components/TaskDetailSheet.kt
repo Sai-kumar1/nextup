@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import io.github.saikumar1.nextup.data.Priority
 import io.github.saikumar1.nextup.data.Task
 import io.github.saikumar1.nextup.util.findLinks
 import java.time.LocalDate
@@ -78,6 +79,18 @@ fun TaskDetailSheet(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            if (task.priority != Priority.NONE) {
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PriorityIcon(task.priority, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "${task.priority.label} priority",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = task.priority.color(),
+                    )
+                }
             }
             Spacer(Modifier.height(20.dp))
 

@@ -10,8 +10,18 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-    @Query("SELECT * FROM tasks ORDER BY createdAt DESC")
-    fun observeAll(): Flow<List<Task>>
+    @Query("SELECT * FROM tasks WHERE dueDate = :day ORDER BY createdAt ASC")
+    fun observeForDate(day: Long): Flow<List<Task>>
+
+    @Query(
+        """
+        SELECT dueDate, COUNT(*) AS total, SUM(isDone) AS done
+        FROM tasks
+        WHERE dueDate BETWEEN :from AND :to
+        GROUP BY dueDate
+        """,
+    )
+    fun observeDayCounts(from: Long, to: Long): Flow<List<DayCount>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(task: Task): Long
@@ -22,6 +32,6 @@ interface TaskDao {
     @Delete
     suspend fun delete(task: Task)
 
-    @Query("DELETE FROM tasks WHERE isDone = 1")
-    suspend fun clearCompleted()
+    @Query("DELETE FROM tasks WHERE isDone = 1 AND dueDate = :day")
+    suspend fun clearCompleted(day: Long)
 }

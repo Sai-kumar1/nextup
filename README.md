@@ -2,7 +2,13 @@
 
 A simple, offline todo list for Android, built with Kotlin, Jetpack Compose (Material 3) and Room.
 
-**Features:** add, edit and delete tasks, mark them done (they move to a collapsible *Completed* section), swipe to delete with Undo, clear all completed tasks, and light/dark themes with Material You colors. Everything is stored on the device.
+**Features**
+- **Plan by day:** the home screen shows only today's tasks. Swipe the week strip or open the calendar to plan any other day; dots mark days that have tasks. *Today* jumps back.
+- **Tasks with notes:** tap a task to view it. Links in notes open in the browser on tap and are copied to the clipboard on long-press. Edit a task to change its title, notes or day.
+- **Done and undo:** tick tasks off (they move to a collapsible *Completed* section), swipe to delete with Undo, or clear a day's completed tasks.
+- **Light and dark themes:** the sun/moon button switches themes with a circular reveal (light rises from the bottom, dark falls from the top). It follows the system theme until you use it.
+- **Friendly empty states:** an animated ☕ when nothing is planned, and a 🎉 when every task of the day is done.
+- Everything is stored on the device.
 
 ## Getting the APK
 
@@ -72,3 +78,7 @@ app/src/main/java/io/github/saikumar1/nextup/
   android-ci.yml   tests + lint + debug APK on every push/PR
   release.yml      signed release APK on v* tags
 ```
+
+## Credits
+
+Animated emoji from [Google Noto Emoji](https://googlefonts.github.io/noto-emoji-animation/), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
